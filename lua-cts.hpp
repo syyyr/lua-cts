@@ -1,6 +1,10 @@
 #include <tuple>
 #include <lua.hpp>
 
+namespace lua {
+using Int = std::integral_constant<int, LUA_TNUMBER>;
+using Nil = std::integral_constant<int, LUA_TNIL>;
+
 template <typename T, typename S>
 struct pop_back_impl;
 
@@ -18,9 +22,23 @@ struct pop_back {
 template <typename C, int N>
 using pop_back_t = typename pop_back<C, N>::type;
 
-namespace lua {
-using Int = std::integral_constant<int, LUA_TNUMBER>;
-using Nil = std::integral_constant<int, LUA_TNIL>;
+template<typename T>
+struct tag {
+	using type = T;
+};
+
+template<int N, typename... Ts>
+struct select_type {
+    using type = typename std::tuple_element_t<N, std::tuple<Ts...>>;
+};
+
+template <int N>
+struct select_type<N> {
+    using type = void;
+};
+
+template <int N, typename... Ts>
+using select_type_t = typename select_type<N, Ts...>::type;
 
 template <template <typename...> typename SW, typename ...Types>
 class impl_StackWrapper {
@@ -50,6 +68,14 @@ public:
 	}
 
 	static constexpr int stack_size = sizeof...(Types);
+
+	template <int N, typename Callable>
+	auto tointeger(Callable&& callable)
+	{
+		static_assert(std::is_same_v<select_type_t<N - 1, Types...>, Int>, "The selected element is not an int.");
+		callable(lua_tointeger(m_state, N));
+		return *this;
+	}
 
 private:
 	lua_State* m_state;
