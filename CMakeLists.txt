@@ -24,4 +24,6 @@ if (BUILD_TESTING)
 
         add_test(${TESTNAME} ${TESTNAME})
     endfunction()
+
+    lua_cts_test(stack)
 endif()
