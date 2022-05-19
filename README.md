@@ -11,3 +11,4 @@ auto s2 = s.pop<1>();
 // decltype(s2) -> lua::StackWrapper<>
 
 s2.pop<1>(); // Doesn't compile, the stack is empty.
+```
