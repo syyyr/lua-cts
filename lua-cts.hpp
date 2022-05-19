@@ -67,8 +67,6 @@ public:
 		return SW<Types..., lua::Nil>(m_state);
 	}
 
-	static constexpr int stack_size = sizeof...(Types);
-
 	template <int N, typename Callable>
 	auto tointeger(Callable&& callable)
 	{
@@ -76,6 +74,8 @@ public:
 		callable(lua_tointeger(m_state, N));
 		return *this;
 	}
+
+	static constexpr int stack_size = sizeof...(Types);
 
 private:
 	lua_State* m_state;
