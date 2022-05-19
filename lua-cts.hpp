@@ -49,26 +49,26 @@ public:
 	}
 
 	template <int N>
-	auto pop()
+	[[nodiscard]] auto pop()
 	{
 		lua_pop(m_state, N);
 		return pop_back_t<SW<Types...>, N>{m_state};
 	}
 
-	auto pushinteger(int val)
+	[[nodiscard]] auto pushinteger(int val)
 	{
 		lua_pushinteger(m_state, val);
 		return SW<Types..., lua::Int>(m_state);
 	}
 
-	auto pushnil()
+	[[nodiscard]] auto pushnil()
 	{
 		lua_pushnil(m_state);
 		return SW<Types..., lua::Nil>(m_state);
 	}
 
 	template <int N, typename Callable>
-	auto tointeger(Callable&& callable)
+	[[nodiscard]] auto tointeger(Callable&& callable)
 	{
 		static_assert(std::is_same_v<select_type_t<N - 1, Types...>, Int>, "The selected element is not an int.");
 		callable(lua_tointeger(m_state, N));
