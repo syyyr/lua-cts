@@ -12,11 +12,6 @@ TEST_CASE("stack")
         REQUIRE(lua::StackWrapper<>(mock_state.get()).stack_size == 0);
     }
 
-    DOCTEST_SUBCASE("Creating a stack with one int")
-    {
-        REQUIRE(lua::StackWrapper<lua::Int>(mock_state.get()).stack_size == 1);
-    }
-
     DOCTEST_SUBCASE("Pushing values")
     {
         auto s = lua::StackWrapper<>(mock_state.get()).pushinteger(1);

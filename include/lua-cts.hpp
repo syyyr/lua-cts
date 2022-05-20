@@ -1,3 +1,4 @@
+#include <stdexcept>
 #include <tuple>
 #include <lua.hpp>
 
@@ -41,6 +42,31 @@ struct select_type<N> {
 template <int N, typename... Ts>
 using select_type_t = typename select_type<N, Ts...>::type;
 
+template <int ArgNum, typename ArgType, typename... Rest>
+void impl_check_lua_args(lua_State* state)
+{
+    if (auto type = lua_type(state, ArgNum); type != ArgType::value) {
+        using namespace std::string_literals;
+        throw std::runtime_error("Stack value #%d should have been of type "s + lua_typename(state, ArgType::value) + " (got `" + lua_typename(state, type) + ")");
+    }
+
+    if constexpr (sizeof...(Rest) != 0)  {
+        impl_check_lua_args<ArgNum + 1, Rest...>(state);
+    }
+
+}
+
+template <typename... ExpectedArgTypes>
+void check_lua_args(lua_State* state)
+{
+    if (auto nargs = lua_gettop(state); nargs != sizeof...(ExpectedArgTypes)) {
+        throw std::runtime_error("Expected stack size is " + std::to_string(sizeof...(ExpectedArgTypes)) + " (got " + std::to_string(nargs) + ")");
+    }
+
+    if constexpr (sizeof...(ExpectedArgTypes) != 0) {
+        impl_check_lua_args<1, ExpectedArgTypes...>(state);
+    }
+}
 
 template <template <typename...> typename SW, typename ...Types>
 class impl_StackWrapper {
@@ -48,6 +74,7 @@ public:
     impl_StackWrapper(lua_State* state)
         : m_state(state)
     {
+        check_lua_args<Types...>(state);
     }
 
     template <int N>
