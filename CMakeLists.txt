@@ -6,6 +6,8 @@ include(CTest)
 
 if (BUILD_TESTING)
     find_package(doctest 2.4.6 REQUIRED)
+    find_package(PkgConfig)
+    pkg_check_modules(LUA REQUIRED lua>=5.4 IMPORTED_TARGET)
 
     add_library(DoctestIntegration STATIC
         tests/doctest.cpp
@@ -20,7 +22,7 @@ if (BUILD_TESTING)
         add_executable(${TESTNAME}
             tests/${name}.cpp
             )
-        target_link_libraries(test_${name} DoctestIntegration)
+        target_link_libraries(test_${name} DoctestIntegration PkgConfig::LUA)
 
         add_test(${TESTNAME} ${TESTNAME})
     endfunction()
