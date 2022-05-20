@@ -83,6 +83,13 @@ public:
         return *this;
     }
 
+    template <int N, typename Callable>
+    [[nodiscard]] auto type(Callable&& callable)
+    {
+        callable(ValueType<N>::value);
+        return *this;
+    }
+
     static constexpr int stack_size = sizeof...(Types);
 
 private:

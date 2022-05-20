@@ -25,6 +25,11 @@ TEST_CASE("stack")
         (void) s.tointeger<-1>([] (int x) {REQUIRE(x == 1);} );
     }
 
+    DOCTEST_SUBCASE("Querying type")
+    {
+        (void) lua::StackWrapper<>(mock_state.get()).pushinteger(1).type<1>([] (int type) {REQUIRE(type == LUA_TNUMBER);});
+    }
+
     DOCTEST_SUBCASE("Popping elements")
     {
         auto s = lua::StackWrapper<>(mock_state.get()).pushinteger(1);
