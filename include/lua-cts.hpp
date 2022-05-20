@@ -116,11 +116,12 @@ class StackWrapper : public impl_StackWrapper<StackWrapper, Types...> {
 
 template <>
 class StackWrapper<> : public impl_StackWrapper<StackWrapper> {
+public:
     using impl_StackWrapper<StackWrapper>::impl_StackWrapper;
-    public:
 
-    template <int N> auto pop() = delete; // Can't delete from an empty stack.
-
+    auto pop() = delete; // Can't delete from an empty stack.
+    auto tointeger() = delete; // Empty stack has not integers.
+    auto type() = delete; // Empty stack has no types.
 };
 }
 
