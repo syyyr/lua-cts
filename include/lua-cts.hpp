@@ -16,7 +16,7 @@ struct pop_back_impl<C<Args...>, std::index_sequence<Is...>> {
 
 template <typename C, int N>
 struct pop_back {
-	static_assert(C::stack_size - N >= 0, "Can't pop more values than present on the stack");
+    static_assert(C::stack_size - N >= 0, "Can't pop more values than present on the stack");
     using type = typename pop_back_impl<C, std::make_index_sequence<(C::stack_size) - N>>::type;
 };
 
@@ -25,7 +25,7 @@ using pop_back_t = typename pop_back<C, N>::type;
 
 template<typename T>
 struct tag {
-	using type = T;
+    using type = T;
 };
 
 template<int N, typename... Ts>
@@ -41,74 +41,75 @@ struct select_type<N> {
 template <int N, typename... Ts>
 using select_type_t = typename select_type<N, Ts...>::type;
 
+
 template <template <typename...> typename SW, typename ...Types>
 class impl_StackWrapper {
 public:
-	impl_StackWrapper(lua_State* state)
-		: m_state(state)
-	{
-	}
+    impl_StackWrapper(lua_State* state)
+        : m_state(state)
+    {
+    }
 
-	template <int N>
-	[[nodiscard]] auto pop()
-	{
-		lua_pop(m_state, N);
-		return pop_back_t<SW<Types...>, N>{m_state};
-	}
+    template <int N>
+    [[nodiscard]] auto pop()
+    {
+        lua_pop(m_state, N);
+        return pop_back_t<SW<Types...>, N>{m_state};
+    }
 
-	[[nodiscard]] auto pushinteger(int val)
-	{
-		lua_pushinteger(m_state, val);
-		return SW<Types..., lua::Int>(m_state);
-	}
+    [[nodiscard]] auto pushinteger(int val)
+    {
+        lua_pushinteger(m_state, val);
+        return SW<Types..., lua::Int>(m_state);
+    }
 
-	[[nodiscard]] auto pushnil()
-	{
-		lua_pushnil(m_state);
-		return SW<Types..., lua::Nil>(m_state);
-	}
+    [[nodiscard]] auto pushnil()
+    {
+        lua_pushnil(m_state);
+        return SW<Types..., lua::Nil>(m_state);
+    }
 
-	[[nodiscard]] auto pushcfunction(lua_CFunction func)
-	{
-		lua_pushcfunction(m_state, func);
-		return SW<Types..., lua::Function>(m_state);
-	}
+    [[nodiscard]] auto pushcfunction(lua_CFunction func)
+    {
+        lua_pushcfunction(m_state, func);
+        return SW<Types..., lua::Function>(m_state);
+    }
 
-	template <int N, typename Callable>
-	[[nodiscard]] auto tointeger(Callable&& callable)
-	{
-		constexpr auto absN = toAbsoluteIndex(N);
-		static_assert(std::is_same_v<select_type_t<absN - 1, Types...>, Int>, "The selected element is not an int.");
-		callable(lua_tointeger(m_state, N));
-		return *this;
-	}
+    template <int N, typename Callable>
+    [[nodiscard]] auto tointeger(Callable&& callable)
+    {
+        constexpr auto absN = toAbsoluteIndex(N);
+        static_assert(std::is_same_v<select_type_t<absN - 1, Types...>, Int>, "The selected element is not an int.");
+        callable(lua_tointeger(m_state, N));
+        return *this;
+    }
 
-	static constexpr int stack_size = sizeof...(Types);
+    static constexpr int stack_size = sizeof...(Types);
 
 private:
-	constexpr static int toAbsoluteIndex(int i)
-	{
-		if (i > 0) {
-			return i;
-		}
+    constexpr static int toAbsoluteIndex(int i)
+    {
+        if (i > 0) {
+            return i;
+        }
 
-		return stack_size + i + 1;
-	}
+        return stack_size + i + 1;
+    }
 
-	lua_State* m_state;
+    lua_State* m_state;
 };
 
 template <typename... Types>
 class StackWrapper : public impl_StackWrapper<StackWrapper, Types...> {
-	using impl_StackWrapper<StackWrapper, Types...>::impl_StackWrapper;
+    using impl_StackWrapper<StackWrapper, Types...>::impl_StackWrapper;
 };
 
 template <>
 class StackWrapper<> : public impl_StackWrapper<StackWrapper> {
-	using impl_StackWrapper<StackWrapper>::impl_StackWrapper;
-	public:
+    using impl_StackWrapper<StackWrapper>::impl_StackWrapper;
+    public:
 
-	template <int N> auto pop() = delete; // Can't delete from an empty stack.
+    template <int N> auto pop() = delete; // Can't delete from an empty stack.
 
 };
 }
