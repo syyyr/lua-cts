@@ -22,6 +22,7 @@ TEST_CASE("stack")
         auto s = lua::StackWrapper<>(mock_state.get()).pushinteger(1);
         REQUIRE(s.stack_size == 1);
         (void) s.tointeger<1>([] (int x) {REQUIRE(x == 1);} );
+        (void) s.tointeger<-1>([] (int x) {REQUIRE(x == 1);} );
     }
 
     DOCTEST_SUBCASE("Popping elements")
