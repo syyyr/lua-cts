@@ -23,4 +23,20 @@ TEST_CASE("stack")
         REQUIRE(s.stack_size == 1);
         (void) s.tointeger<1>([] (int x) {REQUIRE(x == 1);} );
     }
+
+    DOCTEST_SUBCASE("Popping elements")
+    {
+        auto s = lua::StackWrapper<>(mock_state.get()).pushinteger(1);
+        REQUIRE(s.stack_size == 1);
+
+        DOCTEST_SUBCASE("Popping one")
+        {
+            REQUIRE(s.pop<1>().stack_size == 0);
+        }
+
+        DOCTEST_SUBCASE("Popping two")
+        {
+            REQUIRE(s.pushinteger(1).pop<2>().stack_size == 0);
+        }
+    }
 }
