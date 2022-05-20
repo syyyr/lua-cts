@@ -78,8 +78,7 @@ public:
     template <int N, typename Callable>
     [[nodiscard]] auto tointeger(Callable&& callable)
     {
-        constexpr auto absN = toAbsoluteIndex(N);
-        static_assert(std::is_same_v<select_type_t<absN - 1, Types...>, Int>, "The selected element is not an int.");
+        static_assert(std::is_same_v<ValueType<N>, Int>, "The selected element is not an int.");
         callable(lua_tointeger(m_state, N));
         return *this;
     }
@@ -87,6 +86,7 @@ public:
     static constexpr int stack_size = sizeof...(Types);
 
 private:
+
     constexpr static int toAbsoluteIndex(int i)
     {
         if (i > 0) {
@@ -95,6 +95,9 @@ private:
 
         return stack_size + i + 1;
     }
+
+    template <int N>
+    using ValueType = select_type_t<toAbsoluteIndex(N) - 1, Types...>;
 
     lua_State* m_state;
 };
