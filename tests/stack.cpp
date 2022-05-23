@@ -12,6 +12,14 @@ TEST_CASE("stack")
         REQUIRE(lua::StackWrapper<>(mock_state.get()).stack_size == 0);
     }
 
+    DOCTEST_SUBCASE("Runtime stack checking")
+    {
+        (void)lua::StackWrapper<>(mock_state.get()).pushinteger(1);
+        REQUIRE_THROWS(lua::StackWrapper<>(mock_state.get()));
+        REQUIRE_THROWS(lua::StackWrapper<lua::Nil>(mock_state.get()));
+        (void)lua::StackWrapper<lua::Int>(mock_state.get());
+    }
+
     DOCTEST_SUBCASE("Pushing values")
     {
         auto s = lua::StackWrapper<>(mock_state.get()).pushinteger(1);
