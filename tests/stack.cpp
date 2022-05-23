@@ -17,7 +17,7 @@ TEST_CASE("stack")
         (void)lua::StackWrapper<>(mock_state.get()).pushinteger(1);
         REQUIRE_THROWS(lua::StackWrapper<>(mock_state.get()));
         REQUIRE_THROWS(lua::StackWrapper<lua::Nil>(mock_state.get()));
-        (void)lua::StackWrapper<lua::Int>(mock_state.get());
+        (void)lua::StackWrapper<lua::Number>(mock_state.get());
     }
 
     DOCTEST_SUBCASE("Pushing values")

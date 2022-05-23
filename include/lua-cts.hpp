@@ -3,7 +3,7 @@
 #include <lua.hpp>
 
 namespace lua {
-using Int = std::integral_constant<int, LUA_TNUMBER>;
+using Number = std::integral_constant<int, LUA_TNUMBER>;
 using Nil = std::integral_constant<int, LUA_TNIL>;
 using Function = std::integral_constant<int, LUA_TFUNCTION>;
 
@@ -87,7 +87,7 @@ public:
     [[nodiscard]] auto pushinteger(int val)
     {
         lua_pushinteger(m_state, val);
-        return SW<Types..., lua::Int>(m_state);
+        return SW<Types..., lua::Number>(m_state);
     }
 
     [[nodiscard]] auto pushnil()
@@ -105,7 +105,7 @@ public:
     template <int N, typename Callable>
     [[nodiscard]] auto tointeger(Callable&& callable)
     {
-        static_assert(std::is_same_v<ValueType<N>, Int>, "The selected element is not an int.");
+        static_assert(std::is_same_v<ValueType<N>, Number>, "The selected element is not an int.");
         callable(lua_tointeger(m_state, N));
         return *this;
     }
