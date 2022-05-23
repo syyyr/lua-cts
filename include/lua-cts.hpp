@@ -103,6 +103,14 @@ public:
     }
 
     template <int N, typename Callable>
+    [[nodiscard]] auto tocfunction(Callable&& callable)
+    {
+        static_assert(std::is_same_v<ValueType<N>, Function>, "The selected element is not a function.");
+        callable(lua_tocfunction(m_state, N));
+        return *this;
+    }
+
+    template <int N, typename Callable>
     [[nodiscard]] auto tointeger(Callable&& callable)
     {
         static_assert(std::is_same_v<ValueType<N>, Number>, "The selected element is not an int.");
