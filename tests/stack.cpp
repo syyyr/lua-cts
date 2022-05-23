@@ -22,7 +22,17 @@ TEST_CASE("stack")
 
     DOCTEST_SUBCASE("Querying type")
     {
-        (void) lua::StackWrapper<>(mock_state.get()).pushinteger(1).type<1>([] (int type) {REQUIRE(type == LUA_TNUMBER);});
+        auto s = lua::StackWrapper<>(mock_state.get());
+
+        DOCTEST_SUBCASE("number")
+        {
+            (void) s.pushinteger(1).type<1>([] (int type) {REQUIRE(type == LUA_TNUMBER);});
+        }
+
+        DOCTEST_SUBCASE("nil")
+        {
+            (void) s.pushnil().type<1>([] (int type) {REQUIRE(type == LUA_TNIL);});
+        }
     }
 
     DOCTEST_SUBCASE("Popping elements")
