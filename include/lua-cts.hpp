@@ -6,6 +6,7 @@ namespace lua {
 using Number = std::integral_constant<int, LUA_TNUMBER>;
 using Nil = std::integral_constant<int, LUA_TNIL>;
 using Function = std::integral_constant<int, LUA_TFUNCTION>;
+using Table = std::integral_constant<int, LUA_TTABLE>;
 
 template <typename T, typename S>
 struct pop_back_impl;
@@ -100,6 +101,12 @@ public:
     {
         lua_pushcfunction(m_state, func);
         return SW<Types..., lua::Function>(m_state);
+    }
+
+    [[nodiscard]] auto newtable()
+    {
+        lua_newtable(m_state);
+        return SW<Types..., lua::Table>(m_state);
     }
 
     template <int N, typename Callable>

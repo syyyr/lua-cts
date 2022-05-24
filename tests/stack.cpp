@@ -31,11 +31,25 @@ TEST_CASE("stack")
 
     DOCTEST_SUBCASE("Pushing values")
     {
-        auto s = lua::StackWrapper<>(mock_state.get()).pushinteger(1);
-        REQUIRE(s.stack_size == 1);
-        (void) s.tointeger<1>([] (int x) {REQUIRE(x == 1);} );
-        (void) s.tointeger<-1>([] (int x) {REQUIRE(x == 1);} );
-        (void) s.pushcfunction(some_function).tocfunction<-1>([] (int (*x)(lua_State*)) { REQUIRE(x(nullptr) == SOME_MAGIC_NUMBER); });
+        auto s = lua::StackWrapper<>(mock_state.get());
+        DOCTEST_SUBCASE("Integer")
+        {
+            auto s2 = s.pushinteger(1);
+            REQUIRE(s2.stack_size == 1);
+            (void) s2.tointeger<1>([] (int x) {REQUIRE(x == 1);} );
+            (void) s2.tointeger<-1>([] (int x) {REQUIRE(x == 1);} );
+        }
+
+        DOCTEST_SUBCASE("C Function")
+        {
+            (void) s.pushcfunction(some_function).tocfunction<-1>([] (int (*x)(lua_State*)) { REQUIRE(x(nullptr) == SOME_MAGIC_NUMBER); });
+        }
+
+        DOCTEST_SUBCASE("Table")
+        {
+            (void) s.newtable().type<-1>([] (int type) { REQUIRE(type == LUA_TTABLE); });
+        }
+
     }
 
     DOCTEST_SUBCASE("Querying type")
