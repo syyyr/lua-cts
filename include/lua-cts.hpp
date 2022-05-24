@@ -3,10 +3,34 @@
 #include <lua.hpp>
 
 namespace lua {
-using Number = std::integral_constant<int, LUA_TNUMBER>;
-using Nil = std::integral_constant<int, LUA_TNIL>;
-using Function = std::integral_constant<int, LUA_TFUNCTION>;
-using Table = std::integral_constant<int, LUA_TTABLE>;
+struct Number {
+    constexpr static int value = LUA_TNUMBER;
+    constexpr static auto name = "a number";
+};
+struct Nil {
+    constexpr static int value = LUA_TNIL;
+    constexpr static auto name = "nil";
+};
+struct Function {
+    constexpr static int value = LUA_TFUNCTION;
+    constexpr static auto name = "a function";
+};
+struct Table {
+    constexpr static int value = LUA_TTABLE;
+    constexpr static auto name = "a table";
+};
+struct Unknown {
+    constexpr static auto name = "an unknown type";
+};
+
+constexpr int toAbsoluteIndex(int stack_size, int i)
+{
+    if (i > 0) {
+        return i;
+    }
+
+    return stack_size + i + 1;
+}
 
 template <typename T, typename S>
 struct pop_back_impl;
@@ -30,6 +54,74 @@ struct tag {
     using type = T;
 };
 
+template <typename SW, typename... NewType>
+struct push_types;
+
+template <template <typename...> class C, typename... Args, typename... NewType>
+struct push_types<C<Args...>, NewType...> {
+    using type = C<Args..., NewType...>;
+};
+
+template <typename SW, typename... NewType>
+using push_type_t = typename push_types<SW, NewType...>::type;
+
+template <typename S, int N>
+struct pop_front;
+
+template <typename S, int N>
+using pop_front_t = typename pop_front<S, N>::type;
+
+template <template<typename...> typename SW, typename Arg, typename... Args, int N>
+struct pop_front<SW<Arg, Args...>, N> {
+    using type = pop_front_t<SW<Args...>, N - 1>;
+};
+
+template <template<typename...> typename SW>
+struct pop_front<SW<>, 0> {
+    using type = SW<>;
+};
+
+template <template<typename...> typename SW, typename Arg, typename... Args>
+struct pop_front<SW<Arg, Args...>, 0> {
+    using type = SW<Arg, Args...>;
+};
+
+template <typename T, typename S>
+struct concat_types;
+
+template <template <typename...> typename SW1, typename... Args1, template <typename...> typename SW2, typename... Args2>
+struct concat_types<SW1<Args1...>, SW2<Args2...>> {
+    using type = SW1<Args1..., Args2...>;
+};
+
+template <typename T, typename S>
+using concat_types_t = typename concat_types<T, S>::type;
+
+template <typename SW, int N, typename NewType>
+struct replace_type;
+
+template <template <typename...> class C, typename... Args, int N, typename NewType>
+struct replace_type<C<Args...>, N, NewType> {
+    static_assert(sizeof...(Args) != 0, "Can't replace type of 0 size stack.");
+    // Example:
+    // If stack size is 2 and we want to replace the second element, N will be 2. So we first pop one element from the
+    // back.
+    constexpr static auto absolute_index = toAbsoluteIndex(sizeof...(Args), N);
+    constexpr static auto args_to_pop = sizeof...(Args) - absolute_index + 1;
+    using head = pop_back_t<C<Args...>, args_to_pop>;
+    // The original stack size is 2. We we need all the elements after the to-be-replaced element.
+    // So, if the replaced element is the second one, we need to pop two from the front.
+    using tail = pop_front_t<C<Args...>, absolute_index>;
+
+    using with_replaced_element = concat_types_t<head, C<NewType>>;
+    using with_tail = concat_types_t<with_replaced_element, tail>;
+
+    using type = with_tail;
+};
+
+template <typename SW, int N, typename NewType>
+using replace_type_t = typename replace_type<SW, N, NewType>::type;
+
 template<int N, typename... Ts>
 struct select_type {
     using type = typename std::tuple_element_t<N, std::tuple<Ts...>>;
@@ -46,9 +138,11 @@ using select_type_t = typename select_type<N, Ts...>::type;
 template <int ArgNum, typename ArgType, typename... Rest>
 void impl_check_lua_args(lua_State* state)
 {
-    if (auto type = lua_type(state, ArgNum); type != ArgType::value) {
-        using namespace std::string_literals;
-        throw std::runtime_error("Stack value #%d should have been of type "s + lua_typename(state, ArgType::value) + " (got `" + lua_typename(state, type) + ")");
+    if constexpr (!std::is_same_v<ArgType, Unknown>) {
+        if (auto type = lua_type(state, ArgNum); type != ArgType::value) {
+            using namespace std::string_literals;
+            throw std::runtime_error("Stack value #%d should have been of type "s + lua_typename(state, ArgType::value) + " (got `" + lua_typename(state, type) + ")");
+        }
     }
 
     if constexpr (sizeof...(Rest) != 0)  {
@@ -68,6 +162,14 @@ void check_lua_args(lua_State* state)
         impl_check_lua_args<1, ExpectedArgTypes...>(state);
     }
 }
+
+template <typename ToCheck, typename Type>
+struct is_same_or_unknown {
+    constexpr static auto value = std::is_same_v<ToCheck, Type> || std::is_same_v<ToCheck, Unknown>;
+};
+
+template <typename ToCheck, typename Type>
+const auto is_same_or_unknown_v = is_same_or_unknown<ToCheck, Type>::value;
 
 template <template <typename...> typename SW, typename ...Types>
 class impl_StackWrapper {
@@ -112,17 +214,19 @@ public:
     template <int N, typename Callable>
     [[nodiscard]] auto tocfunction(Callable&& callable)
     {
-        static_assert(std::is_same_v<ValueType<N>, Function>, "The selected element is not a function.");
+        static_assert(is_same_or_unknown_v<ValueType<N>, Function>, "The selected element is not a function.");
+        check_unknown<N, Function>();
         callable(lua_tocfunction(m_state, N));
-        return SW<Types...>(m_state);
+        return replace_type_t<SW<Types...>, N, Function>(m_state);
     }
 
     template <int N, typename Callable>
     [[nodiscard]] auto tointeger(Callable&& callable)
     {
-        static_assert(std::is_same_v<ValueType<N>, Number>, "The selected element is not an int.");
+        static_assert(is_same_or_unknown_v<ValueType<N>, Number>, "The selected element is not an int.");
+        check_unknown<N, Number>();
         callable(lua_tointeger(m_state, N));
-        return SW<Types...>(m_state);
+        return replace_type_t<SW<Types...>, N, Number>(m_state);
     }
 
     template <int N, typename Callable>
@@ -136,17 +240,18 @@ public:
 
 private:
 
-    constexpr static int toAbsoluteIndex(int i)
+    template<int N, typename Type>
+    void check_unknown()
     {
-        if (i > 0) {
-            return i;
+        if constexpr (std::is_same_v<ValueType<N>, Unknown>) {
+            if (lua_type(m_state, N) != Type::value) {
+                throw std::logic_error(std::string("The selected element is not ") + ValueType<N>::name);
+            }
         }
-
-        return stack_size + i + 1;
     }
 
     template <int N>
-    using ValueType = select_type_t<toAbsoluteIndex(N) - 1, Types...>;
+    using ValueType = select_type_t<toAbsoluteIndex(stack_size, N) - 1, Types...>;
 
     lua_State* m_state;
 };

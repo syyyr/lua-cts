@@ -12,6 +12,28 @@ static int some_function(lua_State*)
 }
 }
 
+static_assert(std::is_same_v<lua::StackWrapper<lua::Number>, lua::pop_front_t<lua::StackWrapper<lua::Number>, 0>>);
+static_assert(std::is_same_v<lua::StackWrapper<>, lua::pop_front_t<lua::StackWrapper<lua::Number>, 1>>);
+static_assert(std::is_same_v<lua::StackWrapper<lua::Nil>, lua::pop_front_t<lua::StackWrapper<lua::Number, lua::Nil>, 1>>);
+
+static_assert(std::is_same_v<lua::StackWrapper<>, lua::concat_types_t<lua::StackWrapper<>, lua::StackWrapper<>>>);
+static_assert(std::is_same_v<lua::StackWrapper<lua::Nil>, lua::concat_types_t<lua::StackWrapper<lua::Nil>, lua::StackWrapper<>>>);
+static_assert(std::is_same_v<lua::StackWrapper<lua::Nil>, lua::concat_types_t<lua::StackWrapper<>, lua::StackWrapper<lua::Nil>>>);
+static_assert(std::is_same_v<lua::StackWrapper<lua::Nil, lua::Number>, lua::concat_types_t<lua::StackWrapper<>, lua::StackWrapper<lua::Nil, lua::Number>>>);
+static_assert(std::is_same_v<lua::StackWrapper<lua::Nil, lua::Number>, lua::concat_types_t<lua::StackWrapper<lua::Nil>, lua::StackWrapper<lua::Number>>>);
+static_assert(std::is_same_v<lua::StackWrapper<lua::Number, lua::Nil>, lua::concat_types_t<lua::StackWrapper<lua::Number>, lua::StackWrapper<lua::Nil>>>);
+static_assert(std::is_same_v<lua::StackWrapper<lua::Number, lua::Nil, lua::Number>, lua::concat_types_t<lua::StackWrapper<lua::Number, lua::Nil>, lua::StackWrapper<lua::Number>>>);
+static_assert(std::is_same_v<lua::StackWrapper<lua::Number, lua::Nil, lua::Number>, lua::concat_types_t<lua::StackWrapper<lua::Number>, lua::StackWrapper<lua::Nil, lua::Number>>>);
+
+static_assert(std::is_same_v<lua::StackWrapper<lua::Number>, lua::replace_type_t<lua::StackWrapper<lua::Nil>, 1, lua::Number>>);
+static_assert(std::is_same_v<lua::StackWrapper<lua::Number, lua::Number>, lua::replace_type_t<lua::StackWrapper<lua::Number, lua::Nil>, 2, lua::Number>>);
+static_assert(std::is_same_v<lua::StackWrapper<lua::Number, lua::Nil, lua::Nil>, lua::replace_type_t<lua::StackWrapper<lua::Nil, lua::Nil, lua::Nil>, 1, lua::Number>>);
+static_assert(std::is_same_v<lua::StackWrapper<lua::Nil, lua::Number, lua::Nil>, lua::replace_type_t<lua::StackWrapper<lua::Nil, lua::Nil, lua::Nil>, 2, lua::Number>>);
+static_assert(std::is_same_v<lua::StackWrapper<lua::Nil, lua::Nil, lua::Number>, lua::replace_type_t<lua::StackWrapper<lua::Nil, lua::Nil, lua::Nil>, 3, lua::Number>>);
+static_assert(std::is_same_v<lua::StackWrapper<lua::Nil, lua::Nil, lua::Number>, lua::replace_type_t<lua::StackWrapper<lua::Nil, lua::Nil, lua::Nil>, -1, lua::Number>>);
+static_assert(std::is_same_v<lua::StackWrapper<lua::Nil, lua::Number, lua::Nil>, lua::replace_type_t<lua::StackWrapper<lua::Nil, lua::Nil, lua::Nil>, -2, lua::Number>>);
+static_assert(std::is_same_v<lua::StackWrapper<lua::Nil, lua::Number, lua::Nil>, lua::replace_type_t<lua::StackWrapper<lua::Nil, lua::Number, lua::Nil>, -2, lua::Number>>);
+
 TEST_CASE("stack")
 {
     auto mock_state = std::unique_ptr<lua_State, decltype(&lua_close)>(luaL_newstate(), lua_close);
@@ -27,6 +49,25 @@ TEST_CASE("stack")
         REQUIRE_THROWS(lua::StackWrapper<>(mock_state.get()));
         REQUIRE_THROWS(lua::StackWrapper<lua::Nil>(mock_state.get()));
         (void)lua::StackWrapper<lua::Number>(mock_state.get());
+    }
+
+    DOCTEST_SUBCASE("Unknown types")
+    {
+        DOCTEST_SUBCASE("Initializing")
+        {
+            (void)lua::StackWrapper<>(mock_state.get()).pushinteger(1);
+            (void)lua::StackWrapper<lua::Unknown>(mock_state.get());
+            REQUIRE_THROWS(lua::StackWrapper<lua::Unknown, lua::Unknown>(mock_state.get()));
+        }
+
+        DOCTEST_SUBCASE("Asserting types")
+        {
+            (void)lua::StackWrapper<>(mock_state.get()).pushinteger(1);
+            auto s = lua::StackWrapper<lua::Unknown>(mock_state.get());
+            static_assert(std::is_same_v<decltype(s), lua::StackWrapper<lua::Unknown>>);
+            auto s2 = s.tointeger<-1>([] (int x) { REQUIRE(x == 1); } );
+            static_assert(std::is_same_v<decltype(s2), lua::StackWrapper<lua::Number>>);
+        }
     }
 
     DOCTEST_SUBCASE("Pushing values")
