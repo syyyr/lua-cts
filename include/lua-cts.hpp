@@ -114,7 +114,7 @@ public:
     {
         static_assert(std::is_same_v<ValueType<N>, Function>, "The selected element is not a function.");
         callable(lua_tocfunction(m_state, N));
-        return *this;
+        return SW<Types...>(m_state);
     }
 
     template <int N, typename Callable>
@@ -122,14 +122,14 @@ public:
     {
         static_assert(std::is_same_v<ValueType<N>, Number>, "The selected element is not an int.");
         callable(lua_tointeger(m_state, N));
-        return *this;
+        return SW<Types...>(m_state);
     }
 
     template <int N, typename Callable>
     [[nodiscard]] auto type(Callable&& callable)
     {
         callable(ValueType<N>::value);
-        return *this;
+        return SW<Types...>(m_state);
     }
 
     static constexpr int stack_size = sizeof...(Types);

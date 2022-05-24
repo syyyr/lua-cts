@@ -47,7 +47,8 @@ TEST_CASE("stack")
 
         DOCTEST_SUBCASE("Table")
         {
-            (void) s.newtable().type<-1>([] (int type) { REQUIRE(type == LUA_TTABLE); });
+            auto s2 = s.newtable().type<-1>([] (int type) { REQUIRE(type == LUA_TTABLE); });
+            static_assert(std::is_same_v<decltype(s2), lua::StackWrapper<lua::Table>>);
         }
 
     }
