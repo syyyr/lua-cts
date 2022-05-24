@@ -29,6 +29,25 @@ TEST_CASE("stack")
         (void)lua::StackWrapper<lua::Number>(mock_state.get());
     }
 
+    DOCTEST_SUBCASE("Unknown types")
+    {
+        DOCTEST_SUBCASE("Initializing")
+        {
+            (void)lua::StackWrapper<>(mock_state.get()).pushinteger(1);
+            (void)lua::StackWrapper<lua::Unknown>(mock_state.get());
+            REQUIRE_THROWS(lua::StackWrapper<lua::Unknown, lua::Unknown>(mock_state.get()));
+        }
+
+        DOCTEST_SUBCASE("Asserting types")
+        {
+            (void)lua::StackWrapper<>(mock_state.get()).pushinteger(1);
+            auto s = lua::StackWrapper<lua::Unknown>(mock_state.get());
+            static_assert(std::is_same_v<decltype(s), lua::StackWrapper<lua::Unknown>>);
+            auto s2 = s.tointeger<-1>([] (int x) { REQUIRE(x == 1); } );
+            static_assert(std::is_same_v<decltype(s), lua::StackWrapper<lua::Number>>);
+        }
+    }
+
     DOCTEST_SUBCASE("Pushing values")
     {
         auto s = lua::StackWrapper<>(mock_state.get());

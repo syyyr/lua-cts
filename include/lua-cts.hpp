@@ -3,10 +3,25 @@
 #include <lua.hpp>
 
 namespace lua {
-using Number = std::integral_constant<int, LUA_TNUMBER>;
-using Nil = std::integral_constant<int, LUA_TNIL>;
-using Function = std::integral_constant<int, LUA_TFUNCTION>;
-using Table = std::integral_constant<int, LUA_TTABLE>;
+struct Number {
+    constexpr static int value = LUA_TNUMBER;
+    constexpr static auto name = "a number";
+};
+struct Nil {
+    constexpr static int value = LUA_TNIL;
+    constexpr static auto name = "nil";
+};
+struct Function {
+    constexpr static int value = LUA_TFUNCTION;
+    constexpr static auto name = "a function";
+};
+struct Table {
+    constexpr static int value = LUA_TTABLE;
+    constexpr static auto name = "a table";
+};
+struct Unknown {
+    constexpr static auto name = "an unknown type";
+};
 
 template <typename T, typename S>
 struct pop_back_impl;
@@ -46,9 +61,11 @@ using select_type_t = typename select_type<N, Ts...>::type;
 template <int ArgNum, typename ArgType, typename... Rest>
 void impl_check_lua_args(lua_State* state)
 {
-    if (auto type = lua_type(state, ArgNum); type != ArgType::value) {
-        using namespace std::string_literals;
-        throw std::runtime_error("Stack value #%d should have been of type "s + lua_typename(state, ArgType::value) + " (got `" + lua_typename(state, type) + ")");
+    if constexpr (!std::is_same_v<ArgType, Unknown>) {
+        if (auto type = lua_type(state, ArgNum); type != ArgType::value) {
+            using namespace std::string_literals;
+            throw std::runtime_error("Stack value #%d should have been of type "s + lua_typename(state, ArgType::value) + " (got `" + lua_typename(state, type) + ")");
+        }
     }
 
     if constexpr (sizeof...(Rest) != 0)  {
@@ -68,6 +85,14 @@ void check_lua_args(lua_State* state)
         impl_check_lua_args<1, ExpectedArgTypes...>(state);
     }
 }
+
+template <typename ToCheck, typename Type>
+struct is_same_or_unknown {
+    constexpr static auto value = std::is_same_v<ToCheck, Type> || std::is_same_v<ToCheck, Unknown>;
+};
+
+template <typename ToCheck, typename Type>
+const auto is_same_or_unknown_v = is_same_or_unknown<ToCheck, Type>::value;
 
 template <template <typename...> typename SW, typename ...Types>
 class impl_StackWrapper {
@@ -120,7 +145,8 @@ public:
     template <int N, typename Callable>
     [[nodiscard]] auto tointeger(Callable&& callable)
     {
-        static_assert(std::is_same_v<ValueType<N>, Number>, "The selected element is not an int.");
+        static_assert(is_same_or_unknown_v<ValueType<N>, Number>, "The selected element is not an int.");
+        check_unknown<N, Number>();
         callable(lua_tointeger(m_state, N));
         return SW<Types...>(m_state);
     }
@@ -135,6 +161,16 @@ public:
     static constexpr int stack_size = sizeof...(Types);
 
 private:
+
+    template<int N, typename Type>
+    void check_unknown()
+    {
+        if constexpr (std::is_same_v<ValueType<N>, Unknown>) {
+            if (lua_type(m_state, N) != Type::value) {
+                throw std::logic_error(std::string("The selected element is not ") + ValueType<N>::name);
+            }
+        }
+    }
 
     constexpr static int toAbsoluteIndex(int i)
     {
