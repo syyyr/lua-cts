@@ -267,7 +267,8 @@ public:
     using impl_StackWrapper<StackWrapper>::impl_StackWrapper;
 
     auto pop() = delete; // Can't delete from an empty stack.
-    auto tointeger() = delete; // Empty stack has not integers.
+    auto tointeger() = delete; // Empty stack has no integers.
+    auto tocfunction() = delete; // Empty stack has no cfunctions.
     auto type() = delete; // Empty stack has no types.
 };
 }
