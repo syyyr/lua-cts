@@ -127,7 +127,7 @@ struct select_type;
 
 template <template <typename...> class C, typename... Args, int N>
 struct select_type<C<Args...>, N> {
-    using type = typename std::tuple_element_t<N, std::tuple<Args...>>;
+    using type = typename std::tuple_element_t<N - 1, std::tuple<Args...>>;
 };
 
 template <typename T, int N>
@@ -266,7 +266,7 @@ private:
     }
 
     template <int N>
-    using ValueType = select_type_t<SW<Types...>, toAbsoluteIndex(stack_size, N) - 1>;
+    using ValueType = select_type_t<SW<Types...>, toAbsoluteIndex(stack_size, N)>;
 
     lua_State* m_state;
 };
