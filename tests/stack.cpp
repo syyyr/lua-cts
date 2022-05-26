@@ -43,6 +43,7 @@ TEST_CASE("stack")
     DOCTEST_SUBCASE("Empty stack is empty")
     {
         REQUIRE(lua::StackWrapper<>(mock_state.get()).stack_size == 0);
+        REQUIRE_STACK(lua::StackWrapper<>(mock_state.get()),);
     }
 
     DOCTEST_SUBCASE("Runtime stack checking")
@@ -78,7 +79,7 @@ TEST_CASE("stack")
         DOCTEST_SUBCASE("Integer")
         {
             auto s2 = s.pushinteger(1);
-            REQUIRE(s2.stack_size == 1);
+            REQUIRE_STACK(s2, lua::Number);
             (void) s2.tointeger<1>([] (int x) {REQUIRE(x == 1);} );
             (void) s2.tointeger<-1>([] (int x) {REQUIRE(x == 1);} );
         }
@@ -119,16 +120,16 @@ TEST_CASE("stack")
     DOCTEST_SUBCASE("Popping elements")
     {
         auto s = lua::StackWrapper<>(mock_state.get()).pushinteger(1);
-        REQUIRE(s.stack_size == 1);
+        REQUIRE_STACK(s, lua::Number);
 
         DOCTEST_SUBCASE("Popping one")
         {
-            REQUIRE(s.pop<1>().stack_size == 0);
+            REQUIRE_STACK(s.pop<1>(),);
         }
 
         DOCTEST_SUBCASE("Popping two")
         {
-            REQUIRE(s.pushinteger(1).pop<2>().stack_size == 0);
+            REQUIRE_STACK(s.pushinteger(1).pop<2>(),);
         }
     }
 
