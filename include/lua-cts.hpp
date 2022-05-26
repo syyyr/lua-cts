@@ -133,6 +133,42 @@ struct select_type<C<Args...>, N> {
 template <typename T, int N>
 using select_type_t = typename select_type<T, N>::type;
 
+template <typename T, int IDX, int N>
+struct rotate;
+
+template <typename T, int IDX, int N>
+using rotate_t = typename rotate<T, IDX, N>::type;
+
+template <template <typename...> class C, typename... Args, int IDX>
+struct rotate<C<Args...>, IDX, 0> {
+    using type = C<Args...>;
+};
+
+template <template <typename...> class C, typename... Args, int IDX, int N>
+struct rotate<C<Args...>, IDX, N> {
+    constexpr static auto absolute_index = toAbsoluteIndex(sizeof...(Args), IDX);
+
+    // We're rotating <A, B, C, D>
+    // Let's say we want to rotate C and D.
+    constexpr static auto args_to_pop = sizeof...(Args) - absolute_index + 1;
+
+    // This is the part we don't want to rotate.
+    // head = <A, B>
+    using head = pop_back_t<C<Args...>, args_to_pop>;
+
+    // This is the part we will rotate.
+    // to_rotate = <C, D>
+    using to_rotate = pop_front_t<C<Args...>, absolute_index - 1>;
+
+    // We'll take the last element, append it to the front, and then pop the last element.
+    using rotated = pop_back_t<concat_types_t<C<select_type_t<to_rotate, toAbsoluteIndex(to_rotate::stack_size, -1)>>, to_rotate>, 1>;
+
+    // Lastly we'll prepend the head again.
+    using rotated_with_head = concat_types_t<head, rotated>;
+
+    using type = rotate_t<rotated_with_head, IDX, N - 1>;
+};
+
 template <int ArgNum, typename ArgType, typename... Rest>
 void impl_check_lua_args(lua_State* state)
 {
@@ -207,6 +243,13 @@ public:
     {
         lua_newtable(m_state);
         return SW<Types..., lua::Table>(m_state);
+    }
+
+    template <int IDX, int N>
+    [[nodiscard]] auto rotate()
+    {
+        lua_rotate(m_state, IDX, N);
+        return rotate_t<SW<Types...>, IDX, N>{m_state};
     }
 
     template <int N>

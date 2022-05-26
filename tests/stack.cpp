@@ -34,6 +34,26 @@ static_assert(std::is_same_v<lua::StackWrapper<lua::Nil, lua::Nil, lua::Number>,
 static_assert(std::is_same_v<lua::StackWrapper<lua::Nil, lua::Number, lua::Nil>, lua::replace_type_t<lua::StackWrapper<lua::Nil, lua::Nil, lua::Nil>, -2, lua::Number>>);
 static_assert(std::is_same_v<lua::StackWrapper<lua::Nil, lua::Number, lua::Nil>, lua::replace_type_t<lua::StackWrapper<lua::Nil, lua::Number, lua::Nil>, -2, lua::Number>>);
 
+static_assert(std::is_same_v<lua::StackWrapper<>, lua::rotate_t<lua::StackWrapper<>, 1, 0>>);
+static_assert(std::is_same_v<lua::StackWrapper<lua::Number>, lua::rotate_t<lua::StackWrapper<lua::Number>, 1, 0>>);
+static_assert(std::is_same_v<lua::StackWrapper<lua::Number>, lua::rotate_t<lua::StackWrapper<lua::Number>, 1, 1>>);
+static_assert(std::is_same_v<lua::StackWrapper<lua::Number, lua::Nil>, lua::rotate_t<lua::StackWrapper<lua::Nil, lua::Number>, 1, 1>>);
+static_assert(std::is_same_v<lua::StackWrapper<lua::Nil, lua::Number>, lua::rotate_t<lua::StackWrapper<lua::Nil, lua::Number>, 1, 2>>);
+static_assert(std::is_same_v<lua::StackWrapper<lua::Number, lua::Nil>, lua::rotate_t<lua::StackWrapper<lua::Nil, lua::Number>, 1, 3>>);
+static_assert(std::is_same_v<lua::StackWrapper<lua::Nil, lua::Number>, lua::rotate_t<lua::StackWrapper<lua::Nil, lua::Number>, 2, 1>>);
+static_assert(std::is_same_v<lua::StackWrapper<lua::Nil, lua::Number>, lua::rotate_t<lua::StackWrapper<lua::Nil, lua::Number>, 2, 2>>);
+static_assert(std::is_same_v<lua::StackWrapper<lua::Nil, lua::Number>, lua::rotate_t<lua::StackWrapper<lua::Nil, lua::Number>, 2, 3>>);
+static_assert(std::is_same_v<lua::StackWrapper<lua::Nil, lua::Number, lua::Function>, lua::rotate_t<lua::StackWrapper<lua::Nil, lua::Number, lua::Function>, 3, 1>>);
+static_assert(std::is_same_v<lua::StackWrapper<lua::Nil, lua::Number, lua::Function>, lua::rotate_t<lua::StackWrapper<lua::Nil, lua::Number, lua::Function>, 3, 2>>);
+static_assert(std::is_same_v<lua::StackWrapper<lua::Nil, lua::Number, lua::Function>, lua::rotate_t<lua::StackWrapper<lua::Nil, lua::Number, lua::Function>, 3, 3>>);
+static_assert(std::is_same_v<lua::StackWrapper<lua::Nil, lua::Function, lua::Number>, lua::rotate_t<lua::StackWrapper<lua::Nil, lua::Number, lua::Function>, 2, 1>>);
+static_assert(std::is_same_v<lua::StackWrapper<lua::Nil, lua::Number, lua::Function>, lua::rotate_t<lua::StackWrapper<lua::Nil, lua::Number, lua::Function>, 2, 2>>);
+static_assert(std::is_same_v<lua::StackWrapper<lua::Nil, lua::Function, lua::Number>, lua::rotate_t<lua::StackWrapper<lua::Nil, lua::Number, lua::Function>, 2, 3>>);
+static_assert(std::is_same_v<lua::StackWrapper<lua::Function, lua::Nil, lua::Number>, lua::rotate_t<lua::StackWrapper<lua::Nil, lua::Number, lua::Function>, 1, 1>>);
+static_assert(std::is_same_v<lua::StackWrapper<lua::Number, lua::Function, lua::Nil>, lua::rotate_t<lua::StackWrapper<lua::Nil, lua::Number, lua::Function>, 1, 2>>);
+static_assert(std::is_same_v<lua::StackWrapper<lua::Nil, lua::Number, lua::Function>, lua::rotate_t<lua::StackWrapper<lua::Nil, lua::Number, lua::Function>, 1, 3>>);
+static_assert(std::is_same_v<lua::StackWrapper<lua::Function, lua::Nil, lua::Number>, lua::rotate_t<lua::StackWrapper<lua::Nil, lua::Number, lua::Function>, 1, 4>>);
+
 #define REQUIRE_STACK(toCheck, ...) static_assert(std::is_same_v<decltype(toCheck), lua::StackWrapper<__VA_ARGS__>>)
 
 TEST_CASE("stack")
@@ -189,5 +209,19 @@ TEST_CASE("stack")
 
         auto s10 = s9.pop<2>();
         REQUIRE_STACK(s10,);
+    }
+
+    DOCTEST_SUBCASE("Rotating elements")
+    {
+        auto s = lua::StackWrapper<>(mock_state.get()).pushinteger(1).pushnil().pushcfunction(some_function);
+        REQUIRE_STACK(s, lua::Number, lua::Nil, lua::Function);
+        auto s2 = s.rotate<-1, 1>();
+        REQUIRE_STACK(s2, lua::Number, lua::Nil, lua::Function);
+        auto s3 = s2.rotate<-2, 1>();
+        REQUIRE_STACK(s3, lua::Number, lua::Function, lua::Nil);
+        auto s4 = s3.rotate<1, 1>();
+        REQUIRE_STACK(s4, lua::Nil, lua::Number, lua::Function);
+        auto s5 = s4.rotate<1, 2>();
+        REQUIRE_STACK(s5, lua::Number, lua::Function, lua::Nil);
     }
 }
