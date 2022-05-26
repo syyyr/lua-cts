@@ -34,6 +34,8 @@ static_assert(std::is_same_v<lua::StackWrapper<lua::Nil, lua::Nil, lua::Number>,
 static_assert(std::is_same_v<lua::StackWrapper<lua::Nil, lua::Number, lua::Nil>, lua::replace_type_t<lua::StackWrapper<lua::Nil, lua::Nil, lua::Nil>, -2, lua::Number>>);
 static_assert(std::is_same_v<lua::StackWrapper<lua::Nil, lua::Number, lua::Nil>, lua::replace_type_t<lua::StackWrapper<lua::Nil, lua::Number, lua::Nil>, -2, lua::Number>>);
 
+#define REQUIRE_STACK(toCheck, ...) static_assert(std::is_same_v<decltype(toCheck), lua::StackWrapper<__VA_ARGS__>>)
+
 TEST_CASE("stack")
 {
     auto mock_state = std::unique_ptr<lua_State, decltype(&lua_close)>(luaL_newstate(), lua_close);
@@ -64,9 +66,9 @@ TEST_CASE("stack")
         {
             (void)lua::StackWrapper<>(mock_state.get()).pushinteger(1);
             auto s = lua::StackWrapper<lua::Unknown>(mock_state.get());
-            static_assert(std::is_same_v<decltype(s), lua::StackWrapper<lua::Unknown>>);
+            REQUIRE_STACK(s, lua::Unknown);
             auto s2 = s.tointeger<-1>([] (int x) { REQUIRE(x == 1); } );
-            static_assert(std::is_same_v<decltype(s2), lua::StackWrapper<lua::Number>>);
+            REQUIRE_STACK(s2, lua::Number);
         }
     }
 
@@ -89,7 +91,7 @@ TEST_CASE("stack")
         DOCTEST_SUBCASE("Table")
         {
             auto s2 = s.newtable().type<-1>([] (int type) { REQUIRE(type == LUA_TTABLE); });
-            static_assert(std::is_same_v<decltype(s2), lua::StackWrapper<lua::Table>>);
+            REQUIRE_STACK(s2, lua::Table);
         }
 
     }
