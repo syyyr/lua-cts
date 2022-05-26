@@ -185,6 +185,22 @@ void impl_check_lua_args(lua_State* state)
 
 }
 
+template <typename SW, typename What, int N>
+struct append_times;
+
+template <typename SW, typename What, int N>
+using append_times_t = typename append_times<SW, What, N>::type;
+
+template <template <typename...> class SW, typename... Args, typename What>
+struct append_times<SW<Args...>, What, 0> {
+    using type = SW<Args...>;
+};
+
+template <template <typename...> class SW, typename... Args, typename What, int N>
+struct append_times<SW<Args...>, What, N> {
+    using type = append_times_t<SW<Args..., What>, What, N - 1>;
+};
+
 template <typename... ExpectedArgTypes>
 void check_lua_args(lua_State* state)
 {
@@ -243,6 +259,15 @@ public:
     {
         lua_newtable(m_state);
         return SW<Types..., lua::Table>(m_state);
+    }
+
+    template <int NArgs, int NResults>
+    [[nodiscard]] auto call()
+    {
+        static_assert(stack_size >= NArgs + 1, "Not enough elements on the stack for a function call");
+        static_assert(is_same_or_unknown_v<ValueType<-1 - NArgs>, Function>, "The called element is not a function.");
+        lua_call(m_state, NArgs, NResults);
+        return append_times_t<pop_back_t<SW<Types...>, NArgs + 1>, Unknown, NResults>(m_state);
     }
 
     template <int IDX, int N>
@@ -331,6 +356,7 @@ public:
     auto tocfunction() = delete; // Empty stack has no cfunctions.
     auto type() = delete; // Empty stack has no types.
     auto setfield() = delete; // Can't set field is the stack is empty.
+    auto call() = delete; // Can't call if the stack is empty.
 };
 }
 

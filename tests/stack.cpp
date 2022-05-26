@@ -5,11 +5,23 @@
 
 const int SOME_MAGIC_NUMBER = 134;
 
-extern "C" {
-static int some_function(lua_State*)
+#define REQUIRE_STACK(toCheck, ...) static_assert(std::is_same_v<decltype(toCheck), lua::StackWrapper<__VA_ARGS__>>)
+
+int magic_function(lua_State*)
 {
     return SOME_MAGIC_NUMBER;
 }
+
+template <int NArgs, int NResults>
+int some_function(lua_State* state)
+{
+    auto s = lua::append_times_t<lua::StackWrapper<>, lua::Unknown, NArgs>(state);
+    if constexpr (NArgs != 0) {
+        auto s2 = s.template pop<NArgs>();
+        REQUIRE_STACK(s2,);
+    }
+
+    return NResults;
 }
 
 static_assert(std::is_same_v<lua::StackWrapper<lua::Number>, lua::pop_front_t<lua::StackWrapper<lua::Number>, 0>>);
@@ -54,7 +66,10 @@ static_assert(std::is_same_v<lua::StackWrapper<lua::Number, lua::Function, lua::
 static_assert(std::is_same_v<lua::StackWrapper<lua::Nil, lua::Number, lua::Function>, lua::rotate_t<lua::StackWrapper<lua::Nil, lua::Number, lua::Function>, 1, 3>>);
 static_assert(std::is_same_v<lua::StackWrapper<lua::Function, lua::Nil, lua::Number>, lua::rotate_t<lua::StackWrapper<lua::Nil, lua::Number, lua::Function>, 1, 4>>);
 
-#define REQUIRE_STACK(toCheck, ...) static_assert(std::is_same_v<decltype(toCheck), lua::StackWrapper<__VA_ARGS__>>)
+static_assert(std::is_same_v<lua::StackWrapper<lua::Unknown>, lua::append_times_t<lua::StackWrapper<>, lua::Unknown, 1>>);
+static_assert(std::is_same_v<lua::StackWrapper<lua::Unknown, lua::Unknown>, lua::append_times_t<lua::StackWrapper<>, lua::Unknown, 2>>);
+static_assert(std::is_same_v<lua::StackWrapper<lua::Number, lua::Unknown, lua::Unknown>, lua::append_times_t<lua::StackWrapper<lua::Number>, lua::Unknown, 2>>);
+static_assert(std::is_same_v<lua::StackWrapper<lua::Number>, lua::append_times_t<lua::StackWrapper<lua::Number>, lua::Unknown, 0>>);
 
 TEST_CASE("stack")
 {
@@ -114,7 +129,7 @@ TEST_CASE("stack")
 
         DOCTEST_SUBCASE("C Function")
         {
-            auto s2 = s.pushcfunction(some_function);
+            auto s2 = s.pushcfunction(magic_function);
             REQUIRE_STACK(s2, lua::Function);
             auto s3 = s2.tocfunction<-1>([] (int (*x)(lua_State*)) { REQUIRE(x(nullptr) == SOME_MAGIC_NUMBER); });
             REQUIRE_STACK(s3, lua::Function);
@@ -153,7 +168,7 @@ TEST_CASE("stack")
 
         DOCTEST_SUBCASE("function")
         {
-            auto s2 = s.pushcfunction(some_function);
+            auto s2 = s.pushcfunction(some_function<0, 0>);
             REQUIRE_STACK(s2, lua::Function);
             auto s3 = s2.type<1>([] (int type) {REQUIRE(type == LUA_TFUNCTION);});
             REQUIRE_STACK(s3, lua::Function);
@@ -213,7 +228,7 @@ TEST_CASE("stack")
 
     DOCTEST_SUBCASE("Rotating elements")
     {
-        auto s = lua::StackWrapper<>(mock_state.get()).pushinteger(1).pushnil().pushcfunction(some_function);
+        auto s = lua::StackWrapper<>(mock_state.get()).pushinteger(1).pushnil().pushcfunction(some_function<0, 0>);
         REQUIRE_STACK(s, lua::Number, lua::Nil, lua::Function);
         auto s2 = s.rotate<-1, 1>();
         REQUIRE_STACK(s2, lua::Number, lua::Nil, lua::Function);
@@ -223,5 +238,40 @@ TEST_CASE("stack")
         REQUIRE_STACK(s4, lua::Nil, lua::Number, lua::Function);
         auto s5 = s4.rotate<1, 2>();
         REQUIRE_STACK(s5, lua::Number, lua::Function, lua::Nil);
+    }
+
+    DOCTEST_SUBCASE("Calling functions")
+    {
+        DOCTEST_SUBCASE("Nargs = 0, NResults = 0")
+        {
+            auto s = lua::StackWrapper<>(mock_state.get()).pushcfunction(some_function<0, 0>);
+            REQUIRE_STACK(s, lua::Function);
+            auto s2 = s.call<0, 0>();
+            REQUIRE_STACK(s2,);
+        }
+
+        DOCTEST_SUBCASE("Nargs = 1, NResults = 0")
+        {
+            auto s = lua::StackWrapper<>(mock_state.get()).pushcfunction(some_function<1, 0>).pushinteger(1);
+            REQUIRE_STACK(s, lua::Function, lua::Number);
+            auto s2 = s.call<1, 0>();
+            REQUIRE_STACK(s2,);
+        }
+
+        DOCTEST_SUBCASE("Nargs = 0, NResults = 1")
+        {
+            auto s = lua::StackWrapper<>(mock_state.get()).pushcfunction(some_function<0, 1>);
+            REQUIRE_STACK(s, lua::Function);
+            auto s2 = s.call<0, 1>();
+            REQUIRE_STACK(s2, lua::Unknown);
+        }
+
+        DOCTEST_SUBCASE("Nargs = 1, NResults = 1")
+        {
+            auto s = lua::StackWrapper<>(mock_state.get()).pushcfunction(some_function<1, 1>).pushinteger(1);
+            REQUIRE_STACK(s, lua::Function, lua::Number);
+            auto s2 = s.call<1, 1>();
+            REQUIRE_STACK(s2, lua::Unknown);
+        }
     }
 }
