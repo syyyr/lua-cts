@@ -211,6 +211,23 @@ public:
         return SW<Types..., lua::Table>(m_state);
     }
 
+    template <int N>
+    [[nodiscard]] auto setfield(const char* key)
+    {
+        static_assert(toAbsoluteIndex(stack_size, N) != stack_size, "Can't use setfield with a table on top of the stack");
+        static_assert(std::is_same_v<ValueType<N>, Table>, "The selected element is not a table.");
+        lua_setfield(m_state, N, key);
+        return pop_back_t<SW<Types...>, 1>{m_state};
+    }
+
+    template <int N>
+    [[nodiscard]] auto getfield(const char* key)
+    {
+        static_assert(std::is_same_v<ValueType<N>, Table>, "The selected element is not a table.");
+        lua_getfield(m_state, N, key);
+        return SW<Types..., lua::Unknown>(m_state);
+    }
+
     template <int N, typename Callable>
     [[nodiscard]] auto tocfunction(Callable&& callable)
     {
@@ -270,6 +287,7 @@ public:
     auto tointeger() = delete; // Empty stack has no integers.
     auto tocfunction() = delete; // Empty stack has no cfunctions.
     auto type() = delete; // Empty stack has no types.
+    auto setfield() = delete; // Can't set field is the stack is empty.
 };
 }
 

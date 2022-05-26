@@ -131,4 +131,18 @@ TEST_CASE("stack")
             REQUIRE(s.pushinteger(1).pop<2>().stack_size == 0);
         }
     }
+
+    DOCTEST_SUBCASE("Table manipulation")
+    {
+        auto s = lua::StackWrapper<>(mock_state.get()).newtable().pushinteger(1);
+        REQUIRE_STACK(s, lua::Table, lua::Number);
+        auto s2 = s.setfield<1>("some_field");
+        REQUIRE_STACK(s2, lua::Table);
+        auto s3 = s2.getfield<1>("some_field");
+        REQUIRE_STACK(s3, lua::Table, lua::Unknown);
+        auto s4 = s3.tointeger<-1>([] (int x) { REQUIRE(x == 1); });
+        REQUIRE_STACK(s4, lua::Table, lua::Number);
+        auto s5 = s4.pop<2>();
+        REQUIRE_STACK(s5,);
+    }
 }
