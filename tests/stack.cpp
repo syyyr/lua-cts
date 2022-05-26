@@ -43,33 +43,39 @@ TEST_CASE("stack")
     DOCTEST_SUBCASE("Empty stack is empty")
     {
         REQUIRE(lua::StackWrapper<>(mock_state.get()).stack_size == 0);
-        REQUIRE_STACK(lua::StackWrapper<>(mock_state.get()),);
+        auto s = lua::StackWrapper<>(mock_state.get());
+        REQUIRE_STACK(s,);
     }
 
     DOCTEST_SUBCASE("Runtime stack checking")
     {
-        (void)lua::StackWrapper<>(mock_state.get()).pushinteger(1);
+        auto s = lua::StackWrapper<>(mock_state.get()).pushinteger(1);
+        REQUIRE_STACK(s, lua::Number);
         REQUIRE_THROWS(lua::StackWrapper<>(mock_state.get()));
         REQUIRE_THROWS(lua::StackWrapper<lua::Nil>(mock_state.get()));
-        (void)lua::StackWrapper<lua::Number>(mock_state.get());
+        auto s2 = lua::StackWrapper<lua::Number>(mock_state.get());
+        REQUIRE_STACK(s2, lua::Number);
     }
 
     DOCTEST_SUBCASE("Unknown types")
     {
         DOCTEST_SUBCASE("Initializing")
         {
-            (void)lua::StackWrapper<>(mock_state.get()).pushinteger(1);
-            (void)lua::StackWrapper<lua::Unknown>(mock_state.get());
+            auto s = lua::StackWrapper<>(mock_state.get()).pushinteger(1);
+            REQUIRE_STACK(s, lua::Number);
+            auto s2 = lua::StackWrapper<lua::Unknown>(mock_state.get());
+            REQUIRE_STACK(s2, lua::Unknown);
             REQUIRE_THROWS(lua::StackWrapper<lua::Unknown, lua::Unknown>(mock_state.get()));
         }
 
         DOCTEST_SUBCASE("Asserting types")
         {
-            (void)lua::StackWrapper<>(mock_state.get()).pushinteger(1);
-            auto s = lua::StackWrapper<lua::Unknown>(mock_state.get());
-            REQUIRE_STACK(s, lua::Unknown);
-            auto s2 = s.tointeger<-1>([] (int x) { REQUIRE(x == 1); } );
-            REQUIRE_STACK(s2, lua::Number);
+            auto s = lua::StackWrapper<>(mock_state.get()).pushinteger(1);
+            REQUIRE_STACK(s, lua::Number);
+            auto s2 = lua::StackWrapper<lua::Unknown>(mock_state.get());
+            REQUIRE_STACK(s2, lua::Unknown);
+            auto s3 = s.tointeger<-1>([] (int x) { REQUIRE(x == 1); } );
+            REQUIRE_STACK(s3, lua::Number);
         }
     }
 
@@ -80,19 +86,26 @@ TEST_CASE("stack")
         {
             auto s2 = s.pushinteger(1);
             REQUIRE_STACK(s2, lua::Number);
-            (void) s2.tointeger<1>([] (int x) {REQUIRE(x == 1);} );
-            (void) s2.tointeger<-1>([] (int x) {REQUIRE(x == 1);} );
+            auto s3 = s2.tointeger<1>([] (int x) {REQUIRE(x == 1);} );
+            REQUIRE_STACK(s3, lua::Number);
+            auto s4 = s3.tointeger<-1>([] (int x) {REQUIRE(x == 1);} );
+            REQUIRE_STACK(s4, lua::Number);
         }
 
         DOCTEST_SUBCASE("C Function")
         {
-            (void) s.pushcfunction(some_function).tocfunction<-1>([] (int (*x)(lua_State*)) { REQUIRE(x(nullptr) == SOME_MAGIC_NUMBER); });
+            auto s2 = s.pushcfunction(some_function);
+            REQUIRE_STACK(s2, lua::Function);
+            auto s3 = s2.tocfunction<-1>([] (int (*x)(lua_State*)) { REQUIRE(x(nullptr) == SOME_MAGIC_NUMBER); });
+            REQUIRE_STACK(s3, lua::Function);
         }
 
         DOCTEST_SUBCASE("Table")
         {
-            auto s2 = s.newtable().type<-1>([] (int type) { REQUIRE(type == LUA_TTABLE); });
+            auto s2 = s.newtable();
             REQUIRE_STACK(s2, lua::Table);
+            auto s3 = s2.type<-1>([] (int type) { REQUIRE(type == LUA_TTABLE); });
+            REQUIRE_STACK(s3, lua::Table);
         }
 
     }
@@ -100,20 +113,30 @@ TEST_CASE("stack")
     DOCTEST_SUBCASE("Querying type")
     {
         auto s = lua::StackWrapper<>(mock_state.get());
+        REQUIRE_STACK(s,);
 
         DOCTEST_SUBCASE("number")
         {
-            (void) s.pushinteger(1).type<1>([] (int type) {REQUIRE(type == LUA_TNUMBER);});
+            auto s2 = s.pushinteger(1);
+            REQUIRE_STACK(s2, lua::Number);
+            auto s3 = s2.type<1>([] (int type) {REQUIRE(type == LUA_TNUMBER);});
+            REQUIRE_STACK(s3, lua::Number);
         }
 
         DOCTEST_SUBCASE("nil")
         {
-            (void) s.pushnil().type<1>([] (int type) {REQUIRE(type == LUA_TNIL);});
+            auto s2 = s.pushnil();
+            REQUIRE_STACK(s2, lua::Nil);
+            auto s3 = s2.type<1>([] (int type) {REQUIRE(type == LUA_TNIL);});
+            REQUIRE_STACK(s3, lua::Nil);
         }
 
         DOCTEST_SUBCASE("function")
         {
-            (void) s.pushcfunction(some_function).type<1>([] (int type) {REQUIRE(type == LUA_TFUNCTION);});
+            auto s2 = s.pushcfunction(some_function);
+            REQUIRE_STACK(s2, lua::Function);
+            auto s3 = s2.type<1>([] (int type) {REQUIRE(type == LUA_TFUNCTION);});
+            REQUIRE_STACK(s3, lua::Function);
         }
     }
 
@@ -124,12 +147,14 @@ TEST_CASE("stack")
 
         DOCTEST_SUBCASE("Popping one")
         {
-            REQUIRE_STACK(s.pop<1>(),);
+            auto s2 = s.pop<1>();
+            REQUIRE_STACK(s2,);
         }
 
         DOCTEST_SUBCASE("Popping two")
         {
-            REQUIRE_STACK(s.pushinteger(1).pop<2>(),);
+            auto s2 = s.pushinteger(1).pop<2>();
+            REQUIRE_STACK(s2,);
         }
     }
 
