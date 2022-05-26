@@ -213,17 +213,19 @@ public:
     [[nodiscard]] auto setfield(const char* key)
     {
         static_assert(toAbsoluteIndex(stack_size, N) != stack_size, "Can't use setfield with a table on top of the stack");
-        static_assert(std::is_same_v<ValueType<N>, Table>, "The selected element is not a table.");
+        static_assert(is_same_or_unknown_v<ValueType<N>, Table>, "The selected element is not a table.");
+        check_unknown<N, Table>();
         lua_setfield(m_state, N, key);
-        return pop_back_t<SW<Types...>, 1>{m_state};
+        return pop_back_t<replace_type_t<SW<Types...>, N, Table>, 1>{m_state};
     }
 
     template <int N>
     [[nodiscard]] auto getfield(const char* key)
     {
-        static_assert(std::is_same_v<ValueType<N>, Table>, "The selected element is not a table.");
+        static_assert(is_same_or_unknown_v<ValueType<N>, Table>, "The selected element is not a table.");
+        check_unknown<N, Table>();
         lua_getfield(m_state, N, key);
-        return SW<Types..., lua::Unknown>(m_state);
+        return concat_types_t<replace_type_t<SW<Types...>, N, Table>, SW<lua::Unknown>>(m_state);
     }
 
     template <int N, typename Callable>

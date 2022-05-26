@@ -162,13 +162,32 @@ TEST_CASE("stack")
     {
         auto s = lua::StackWrapper<>(mock_state.get()).newtable().pushinteger(1);
         REQUIRE_STACK(s, lua::Table, lua::Number);
+
         auto s2 = s.setfield<1>("some_field");
         REQUIRE_STACK(s2, lua::Table);
+
         auto s3 = s2.getfield<1>("some_field");
         REQUIRE_STACK(s3, lua::Table, lua::Unknown);
+
         auto s4 = s3.tointeger<-1>([] (int x) { REQUIRE(x == 1); });
         REQUIRE_STACK(s4, lua::Table, lua::Number);
-        auto s5 = s4.pop<2>();
-        REQUIRE_STACK(s5,);
+
+        auto s5 = lua::StackWrapper<lua::Unknown, lua::Number>(mock_state.get());
+        REQUIRE_STACK(s5, lua::Unknown, lua::Number);
+
+        auto s6 = s5.setfield<1>("setfield");
+        REQUIRE_STACK(s6, lua::Table);
+
+        auto s7 = lua::StackWrapper<lua::Unknown>(mock_state.get());
+        REQUIRE_STACK(s7, lua::Unknown);
+
+        auto s8 = s7.getfield<1>("some_field");
+        REQUIRE_STACK(s8, lua::Table, lua::Unknown);
+
+        auto s9 = s8.tointeger<-1>([] (int x) { REQUIRE(x == 1); });
+        REQUIRE_STACK(s9, lua::Table, lua::Number);
+
+        auto s10 = s9.pop<2>();
+        REQUIRE_STACK(s10,);
     }
 }
