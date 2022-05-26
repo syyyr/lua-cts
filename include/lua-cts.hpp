@@ -122,18 +122,16 @@ struct replace_type<C<Args...>, N, NewType> {
 template <typename SW, int N, typename NewType>
 using replace_type_t = typename replace_type<SW, N, NewType>::type;
 
-template<int N, typename... Ts>
-struct select_type {
-    using type = typename std::tuple_element_t<N, std::tuple<Ts...>>;
+template <typename T, int N>
+struct select_type;
+
+template <template <typename...> class C, typename... Args, int N>
+struct select_type<C<Args...>, N> {
+    using type = typename std::tuple_element_t<N, std::tuple<Args...>>;
 };
 
-template <int N>
-struct select_type<N> {
-    using type = void;
-};
-
-template <int N, typename... Ts>
-using select_type_t = typename select_type<N, Ts...>::type;
+template <typename T, int N>
+using select_type_t = typename select_type<T, N>::type;
 
 template <int ArgNum, typename ArgType, typename... Rest>
 void impl_check_lua_args(lua_State* state)
@@ -268,7 +266,7 @@ private:
     }
 
     template <int N>
-    using ValueType = select_type_t<toAbsoluteIndex(stack_size, N) - 1, Types...>;
+    using ValueType = select_type_t<SW<Types...>, toAbsoluteIndex(stack_size, N) - 1>;
 
     lua_State* m_state;
 };
