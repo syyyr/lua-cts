@@ -249,6 +249,14 @@ TEST_CASE("stack")
         REQUIRE_STACK(s10,);
     }
 
+    DOCTEST_SUBCASE("gettop")
+    {
+        auto s = lua::StackWrapper<>(mock_state.get()).pushinteger(1).pushnil().pushcfunction(some_function<0, 0>);
+        REQUIRE_STACK(s, lua::Number, lua::Nil, lua::Function);
+        auto s2 = s.gettop([&s] (int x) { REQUIRE(s.stack_size == x); });
+        REQUIRE_STACK(s2, lua::Number, lua::Nil, lua::Function);
+    }
+
     DOCTEST_SUBCASE("Rotating elements")
     {
         auto s = lua::StackWrapper<>(mock_state.get()).pushinteger(1).pushnil().pushcfunction(some_function<0, 0>);

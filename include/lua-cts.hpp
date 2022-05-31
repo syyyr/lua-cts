@@ -349,6 +349,13 @@ public:
         return rotate<IDX, 1>();
     }
 
+    template <typename Callable>
+    [[nodiscard]] auto gettop(Callable&& callable)
+    {
+        callable(lua_gettop(m_state));
+        return SW<Types...>(m_state);
+    }
+
     template <int N>
     [[nodiscard]] auto setfield(const char* key)
     {
