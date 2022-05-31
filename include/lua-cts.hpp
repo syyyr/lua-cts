@@ -321,6 +321,21 @@ public:
 
     }
 
+    template <int NArgs, int NResults, int MsgHandler>
+    [[nodiscard]] auto pcall()
+    {
+        static_assert(stack_size >= NArgs + 1, "Not enough elements on the stack for a function call");
+        static_assert(is_same_or_unknown_v<ValueType<-1 - NArgs>, Function>, "The called element is not a function.");
+        if constexpr (MsgHandler != 0) {
+            static_assert(is_same_or_unknown_v<ValueType<MsgHandler>, Function> || is_same_or_unknown_v<ValueType<MsgHandler>, Table>, "The message handler is not a function or a table.");
+        }
+        lua_pcall(m_state, NArgs, NResults, MsgHandler);
+
+        using TypeAfterCall = pop_back_t<SW<Types...>, NArgs + 1>;
+
+        return MultiRet<TypeAfterCall>(m_state);
+    }
+
     template <int IDX, int N>
     [[nodiscard]] auto rotate()
     {

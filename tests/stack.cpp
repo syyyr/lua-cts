@@ -12,6 +12,13 @@ int magic_function(lua_State*)
     return SOME_MAGIC_NUMBER;
 }
 
+int error_function(lua_State* state)
+{
+    luaL_error(state, "error");
+
+    return 0;
+}
+
 template <int NArgs, int NResults>
 int some_function(lua_State* state)
 {
@@ -317,6 +324,35 @@ TEST_CASE("stack")
 
                 auto s3 = s2.resolve<>();
                 REQUIRE_STACK(s3,);
+            }
+        }
+
+        DOCTEST_SUBCASE("protected call")
+        {
+            DOCTEST_SUBCASE("no error")
+            {
+                auto s = lua::StackWrapper<>(mock_state.get()).pushcfunction(some_function<0, 2>);
+                REQUIRE_STACK(s, lua::Function);
+                auto s2 = s.pcall<0, 2, 0>();
+                REQUIRE(s2.result_count() == 2);
+                REQUIRE(s2.type(1) == LUA_TNUMBER);
+                REQUIRE(s2.type(2) == LUA_TNUMBER);
+                REQUIRE(s2.type(3) == LUA_TNONE);
+                auto s3 = s2.resolve<lua::Number, lua::Number>();
+                REQUIRE_STACK(s3, lua::Number, lua::Number);
+            }
+
+            DOCTEST_SUBCASE("with error")
+            {
+                auto s = lua::StackWrapper<>(mock_state.get()).pushcfunction(error_function);
+                REQUIRE_STACK(s, lua::Function);
+                auto s2 = s.pcall<0, 2, 0>();
+                REQUIRE(s2.result_count() == 1);
+                REQUIRE(s2.type(1) == LUA_TSTRING);
+                auto s3 = s2.resolve<lua::String>();
+                REQUIRE_STACK(s3, lua::String);
+                auto s4 = s3.tostring<1>([] (const char* str) { REQUIRE(std::string_view("error") == str); } );
+                REQUIRE_STACK(s4, lua::String);
             }
         }
     }
