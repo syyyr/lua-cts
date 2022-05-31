@@ -263,6 +263,14 @@ TEST_CASE("stack")
         REQUIRE_STACK(s5, lua::Number, lua::Function, lua::Nil);
     }
 
+    DOCTEST_SUBCASE("insert")
+    {
+        auto s = lua::StackWrapper<>(mock_state.get()).pushinteger(1).pushnil().pushcfunction(some_function<0, 0>);
+        REQUIRE_STACK(s, lua::Number, lua::Nil, lua::Function);
+        auto s2 = s.insert<1>();
+        REQUIRE_STACK(s2, lua::Function, lua::Number, lua::Nil);
+    }
+
     DOCTEST_SUBCASE("Calling functions")
     {
         DOCTEST_SUBCASE("Nargs = 0, NResults = 0")

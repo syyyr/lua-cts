@@ -343,6 +343,12 @@ public:
         return rotate_t<SW<Types...>, IDX, N>{m_state};
     }
 
+    template <int IDX>
+    [[nodiscard]] auto insert()
+    {
+        return rotate<IDX, 1>();
+    }
+
     template <int N>
     [[nodiscard]] auto setfield(const char* key)
     {
