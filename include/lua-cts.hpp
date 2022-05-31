@@ -15,6 +15,10 @@ struct Function {
     constexpr static int value = LUA_TFUNCTION;
     constexpr static auto name = "a function";
 };
+struct String {
+    constexpr static int value = LUA_TSTRING;
+    constexpr static auto name = "a string";
+};
 struct Table {
     constexpr static int value = LUA_TTABLE;
     constexpr static auto name = "a table";
@@ -276,6 +280,12 @@ public:
         return SW<Types..., lua::Number>(m_state);
     }
 
+    [[nodiscard]] auto pushstring(const char* val)
+    {
+        lua_pushstring(m_state, val);
+        return SW<Types..., lua::String>(m_state);
+    }
+
     [[nodiscard]] auto pushnil()
     {
         lua_pushnil(m_state);
@@ -344,6 +354,15 @@ public:
         check_unknown<N, Function>();
         callable(lua_tocfunction(m_state, N));
         return replace_type_t<SW<Types...>, N, Function>(m_state);
+    }
+
+    template <int N, typename Callable>
+    [[nodiscard]] auto tostring(Callable&& callable)
+    {
+        static_assert(is_same_or_unknown_v<ValueType<N>, String>, "The selected element is not a string.");
+        check_unknown<N, String>();
+        callable(lua_tostring(m_state, N));
+        return replace_type_t<SW<Types...>, N, String>(m_state);
     }
 
     template <int N, typename Callable>

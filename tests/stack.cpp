@@ -149,6 +149,16 @@ TEST_CASE("stack")
             REQUIRE_STACK(s3, lua::Table);
         }
 
+        DOCTEST_SUBCASE("String")
+        {
+            auto sv = std::string_view("some_string");
+            auto s2 = s.pushstring(sv.data());
+            REQUIRE_STACK(s2, lua::String);
+            auto s3 = s2.type<-1>([] (int type) { REQUIRE(type == LUA_TSTRING); });
+            REQUIRE_STACK(s3, lua::String);
+            auto s4 = s3.tostring<1>([&sv] (const char* str) { REQUIRE(sv == str); } );
+            REQUIRE_STACK(s4, lua::String);
+        }
     }
 
     DOCTEST_SUBCASE("Querying type")
