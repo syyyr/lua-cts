@@ -21,6 +21,12 @@ int some_function(lua_State* state)
         REQUIRE_STACK(s2,);
     }
 
+    for (auto i = 0; i < NResults; i++) {
+        lua_pushnumber(state, 1);
+    }
+
+    (void) lua::append_times_t<lua::StackWrapper<>, lua::Unknown, NResults>(state);
+
     return NResults;
 }
 
@@ -272,6 +278,36 @@ TEST_CASE("stack")
             REQUIRE_STACK(s, lua::Function, lua::Number);
             auto s2 = s.call<1, 1>();
             REQUIRE_STACK(s2, lua::Unknown);
+        }
+
+        DOCTEST_SUBCASE("LUA_MULTRET")
+        {
+            DOCTEST_SUBCASE("two results")
+            {
+                auto s = lua::StackWrapper<>(mock_state.get()).pushcfunction(some_function<0, 2>);
+                REQUIRE_STACK(s, lua::Function);
+                auto s2 = s.call<0, LUA_MULTRET>();
+                REQUIRE(s2.result_count() == 2);
+                REQUIRE(s2.type(1) == LUA_TNUMBER);
+                REQUIRE(s2.type(2) == LUA_TNUMBER);
+                REQUIRE(s2.type(3) == LUA_TNONE);
+
+                auto s3 = s2.resolve<lua::Number, lua::Number>();
+                REQUIRE_STACK(s3, lua::Number, lua::Number);
+
+            }
+
+            DOCTEST_SUBCASE("zero results")
+            {
+                auto s = lua::StackWrapper<>(mock_state.get()).pushcfunction(some_function<0, 0>);
+                REQUIRE_STACK(s, lua::Function);
+                auto s2 = s.call<0, LUA_MULTRET>();
+                REQUIRE(s2.result_count() == 0);
+                REQUIRE(s2.type(1) == LUA_TNONE);
+
+                auto s3 = s2.resolve<>();
+                REQUIRE_STACK(s3,);
+            }
         }
     }
 }

@@ -221,6 +221,39 @@ struct is_same_or_unknown {
 template <typename ToCheck, typename Type>
 const auto is_same_or_unknown_v = is_same_or_unknown<ToCheck, Type>::value;
 
+template <typename SW>
+class MultiRet;
+
+template <template <typename...> typename SW, typename ...Types>
+class MultiRet<SW<Types...>> {
+public:
+    MultiRet(lua_State* state)
+        : m_state(state)
+    {
+    }
+
+    [[nodiscard]] auto type(int n)
+    {
+        auto index = n < 0 ? n : n + sizeof...(Types);
+        return lua_type(m_state, index);
+    }
+
+    [[nodiscard]] auto result_count()
+    {
+        return  lua_gettop(m_state) - sizeof...(Types);
+    }
+
+    template <typename... RetVals>
+    [[nodiscard]] auto resolve()
+    {
+        return SW<Types..., RetVals...>(m_state);
+    }
+
+
+private:
+    lua_State* m_state;
+};
+
 template <template <typename...> typename SW, typename ...Types>
 class impl_StackWrapper {
 public:
@@ -267,7 +300,15 @@ public:
         static_assert(stack_size >= NArgs + 1, "Not enough elements on the stack for a function call");
         static_assert(is_same_or_unknown_v<ValueType<-1 - NArgs>, Function>, "The called element is not a function.");
         lua_call(m_state, NArgs, NResults);
-        return append_times_t<pop_back_t<SW<Types...>, NArgs + 1>, Unknown, NResults>(m_state);
+
+        using TypeAfterCall = pop_back_t<SW<Types...>, NArgs + 1>;
+
+        if constexpr (NResults == LUA_MULTRET) {
+            return MultiRet<TypeAfterCall>(m_state);
+        } else {
+            return append_times_t<TypeAfterCall, Unknown, NResults>(m_state);
+        }
+
     }
 
     template <int IDX, int N>
